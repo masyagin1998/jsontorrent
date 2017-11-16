@@ -230,9 +230,10 @@ func (server *Server) SelectLoop() {
 func (server *Server) Request() {
 	// Heuristics "First Rare".
 
-	// Get rarest piece index.
+	// Get rarest piece indexes.
 	minimum := len(server.otherPeers) + 1
 	index := -1
+	indexes := make([]int, 0)
 	for i := 0; i < len(server.fileInfo); i++ {
 		localMinimum := 0
 		for _, peer := range server.otherPeers {
@@ -243,11 +244,21 @@ func (server *Server) Request() {
 		if (localMinimum > 0) && (localMinimum < minimum) {
 			minimum = localMinimum
 			index = i
+			indexes = nil
+			indexes = make([]int, 0)
+			indexes = append(indexes, index)
+		} else if localMinimum == minimum {
+			indexes = append(indexes, i)
 		}
 	}
 	if index == -1 {
 		return
 	}
+	// Chose rarest piece index by random.
+	rand.Seed(time.Now().UTC().UnixNano())
+	index = rand.Intn(len(indexes))
+	index = indexes[index]
+
 	// Get all peers which have rarest piece.
 	peers := make([]*Peer, 0)
 	for _, peer := range server.otherPeers {
@@ -256,7 +267,6 @@ func (server *Server) Request() {
 		}
 	}
 	// Chose peer for request by random.
-	rand.Seed(time.Now().UTC().UnixNano())
 	peerIndex := rand.Intn(len(peers))
 	peers[peerIndex].waitingFor[index] = true
 	err := peers[peerIndex].encoder.Encode(Message{Command: "request", Request: index})
