@@ -191,7 +191,6 @@ func (server *Server) SelectLoop() {
 			}
 		}
 		if !server.haveFile {
-			// Надо править этот кусок кода
 			flag := true
 			for _, pieceInfo := range server.fileInfo {
 				if !pieceInfo.have {
@@ -206,7 +205,6 @@ func (server *Server) SelectLoop() {
 					log.Error("error, while creating file", "error", err)
 					return
 				}
-
 				for i := 0; i < len(server.fileInfo); i++ {
 					_, err = io.Copy(file, strings.NewReader(server.fileInfo[i].data))
 					if err != nil {
@@ -224,25 +222,6 @@ func (server *Server) SelectLoop() {
 				continue
 			}
 			server.Request()
-			// Здесь будет эвристика оптимального выбора, но это неточно.
-			/*
-				index := 0
-				for i := 0; i < len(server.fileInfo); i++ {
-					if !server.fileInfo[i].have {
-						index = i
-						break
-					}
-				}
-				for _, peer := range server.otherPeers {
-					if (peer.isConnected) && (peer.have[index]) {
-						err := peer.encoder.Encode(Message{Command: "request", Request: index})
-						if err != nil {
-							server.KillPeer(peer)
-						}
-						break
-					}
-				}
-			*/
 		}
 	}
 }
@@ -286,5 +265,4 @@ func (server *Server) Request() {
 	} else {
 		log.Info("request was sent successfully", "to", peers[peerIndex].TCPAddr.String(), "index of piece", index)
 	}
-
 }

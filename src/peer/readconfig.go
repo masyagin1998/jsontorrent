@@ -69,7 +69,10 @@ func ReadConfig() (data ConfigData, err error) {
 			break
 		}
 	}
-	file.Close()
+	err = file.Close()
+	if err != nil {
+		return data, err
+	}
 	// Check torrent filename.
 	if data.torrentFilename == "" {
 		return data, errors.New("invalid torrent filename")

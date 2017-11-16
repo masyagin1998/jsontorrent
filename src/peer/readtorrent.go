@@ -28,7 +28,10 @@ func ReadTorrent(torrentFilename string) (data TorrentData, err error) {
 	if (err != nil) && (err != io.EOF) {
 		return data, err
 	}
-	file.Close()
+	err = file.Close()
+	if err != nil {
+		return data, err
+	}
 	metaInfo := string(buffer[:bufferSize])
 	i := 0
 	j := 0
