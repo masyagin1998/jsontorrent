@@ -91,29 +91,38 @@ func (server *Server) RunServer() {
 func (server *Server) ListenLoop() {
 	listener, err := net.ListenTCP("tcp", server.myPeer.TCPAddr)
 	if err != nil {
-		log.Error("error, while starting listener", "error", err)
+		log.Error("error, while starting listener.", "error", err)
 		return
 	}
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
-			log.Error("error, while accepting connection", "error", err)
+			log.Error("error, while accepting connection.", "error", err)
 		} else {
-			len := make([]byte, 1)
-			_, err := conn.Read(len)
+			IPLength := make([]byte, 1)
+			_, err := conn.Read(IPLength)
 			if err != nil {
-				log.Error("error, while getting IP adress", "error", err)
+				log.Error("error, while getting IP adress.", "error", err)
 			} else {
-				a := make([]byte, len[0])
-				_, err := conn.Read(a)
+				IPString := make([]byte, IPLength[0])
+				_, err := conn.Read(IPString)
 				if err != nil {
-					log.Error("error, while getting IP adress", "error", err)
+					log.Error("error, while getting IP adress.", "error", err)
 				} else {
-					a := string(a)
+					IPString := string(IPString)
+					flag := false
 					for _, peer := range server.otherPeers {
-						if peer.TCPAddr.String() == a {
+						if peer.TCPAddr.String() == IPString {
 							server.Join(conn, peer)
+							flag = true
 							break
+						}
+					}
+					if !flag {
+						log.Info("unknown peer tried to connect.")
+						err = conn.Close()
+						if err != nil {
+							log.Error("error, while closing connection from unknown peer", "error", err)
 						}
 					}
 				}
@@ -176,7 +185,7 @@ func (server *Server) SelectLoop() {
 					"from", newMessage.peer.TCPAddr.String(),
 					"type", newMessage.message.Command,
 					"index of piece", newMessage.message.Index)
-				if !server.haveFile {
+				if !server.haveFile && !server.fileInfo[newMessage.message.Index].have {
 					server.fileInfo[newMessage.message.Index].data = string(newMessage.message.Piece[:len(newMessage.message.Piece)])
 					server.fileInfo[newMessage.message.Index].have = true
 				}
@@ -239,6 +248,9 @@ func (server *Server) Request() {
 		for _, peer := range server.otherPeers {
 			if (peer.isConnected) && (peer.have[i]) && (!peer.waitingFor[i]) && (!server.fileInfo[i].have) {
 				localMinimum++
+			} else if peer.waitingFor[i] {
+				localMinimum = -1
+				break
 			}
 		}
 		if (localMinimum > 0) && (localMinimum < minimum) {
@@ -264,6 +276,8 @@ func (server *Server) Request() {
 	for _, peer := range server.otherPeers {
 		if (peer.isConnected) && (peer.have[index]) && (!peer.waitingFor[index]) {
 			peers = append(peers, peer)
+		} else if peer.waitingFor[index] {
+			return
 		}
 	}
 	// Chose peer for request by random.
